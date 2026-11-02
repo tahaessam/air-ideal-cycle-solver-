@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #0f172a;
+  background: #f5f7fa;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: #f5f7fa;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+/* Hide number input spinners for cleaner engineering UI */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+@layer components {
+  .app-shell {
+    @apply flex h-svh overflow-hidden bg-surface-workspace text-ink;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-line bg-surface shadow-panel;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between gap-3 border-b border-line px-5 py-4;
+  }
+
+  .page-wrap {
+    @apply mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-ink sm:text-[1.75rem];
+  }
+
+  .page-subtitle {
+    @apply mt-1.5 max-w-2xl text-sm leading-relaxed text-ink-secondary;
+  }
+
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-tertiary;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(27,84,232,0.25)] transition;
+    @apply hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink transition;
+    @apply hover:border-line-strong hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-ink-secondary transition;
+    @apply hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20;
+  }
+
+  .field-input {
+    @apply w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-tertiary transition;
+    @apply focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20;
+  }
+
+  .field-select {
+    @apply rounded-r-xl border border-l-0 border-line bg-surface-sunken px-3 py-2.5 text-sm font-medium text-ink-secondary transition;
+    @apply focus:z-10 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide;
+  }
+
+  .badge-accent {
+    @apply badge bg-accent-soft text-accent-strong;
+  }
+
+  .badge-neutral {
+    @apply badge bg-surface-sunken text-ink-secondary;
+  }
+
+  .badge-success {
+    @apply badge bg-success-soft text-success;
+  }
+
+  .segmented {
+    @apply inline-flex rounded-xl border border-line bg-surface-sunken p-1;
+  }
+
+  .segmented-btn {
+    @apply rounded-lg px-3.5 py-1.5 text-sm font-medium capitalize text-ink-secondary transition;
+    @apply hover:text-ink;
+  }
+
+  .segmented-btn-active {
+    @apply bg-white text-ink shadow-sm;
+  }
+
+  .empty-state {
+    @apply flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-line-strong bg-white/70 px-6 text-center;
+  }
+
+  .katex-panel {
+    @apply overflow-x-auto rounded-xl border border-line bg-surface-sunken px-4 py-3;
+  }
+
+  .katex-panel .katex {
+    font-size: 1.05em;
+  }
+}
+
+/* Sidebar scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+}

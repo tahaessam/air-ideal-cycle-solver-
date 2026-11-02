@@ -1,0 +1,419 @@
+تمام. كده اعتمدنا 3 قرارات أساسية:
+
+Cycle Coverage
+
+Otto + Diesel
+
+Calculation Modes
+
+Individual + Cycle Solver
+
+Unit System
+
+Selectable Units
+
+وفي نقطة مهمة: راجعت صور آخر صفحات الـ PDF، وظهرت معادلات Diesel اللي كان استخراج النص منها غير واضح. دلوقتي نقدر نعتمدها بشكل أدق.
+
+# 1. تحديث المعادلات المعتمدة
+
+## Diesel Thermal Efficiency
+
+المعادلة الموجودة في صفحة 21:
+
+\\[ \eta\_{th}=1- \frac{1}{r_c^{\gamma-1}} \left( \frac{\beta^\gamma-1} {\gamma(\beta-1)} \right) \\]
+
+## Diesel Mean Effective Pressure
+
+المعادلة الموجودة في صفحة 22:
+
+\\[ P_m= \frac{P_1r_c^\gamma} {(\gamma-1)(r_c-1)} \gamma(\beta-1)\eta\_{th} \\]
+
+## Diesel Net Work
+
+\\[ W\_{net}=m_m [c_p(T_3-T_2)-c_v(T_4-T_1)] \\]
+
+## Diesel Expansion Temperature
+
+\\[ T_4=T_3\left(\frac{\beta}{r_c}\right)^{\gamma-1} \\]
+
+\\[ T_4=T_1\beta^\gamma \\]
+
+المعادلات دي ظاهرة في صور الصفحات 20–22.&#x20;
+
+chapter 2 air standard cycles.pdf
+
+
+
+تصحيح مهم في الـ Specification: هنفرق بين الحجم الكلي `Vd` والحجم النوعي `vd`؛ لأن استخدام specific volume في معادلة displacement لا يعني أنه الحجم الكلي للأسطوانة.
+
+# 2. نظام الوحدات Selectable Units
+
+مش هنخلي المستخدم مضطر يدخل كل حاجة بوحدة واحدة.
+
+هنعمل Unit Selector لكل Input، مع تخزين جميع الحسابات داخلياً بنظام SI.
+
+| Quantity        | الوحدات المتاحة   |
+| --------------- | ----------------- |
+| Temperature     | K, °C             |
+| Pressure        | Pa, kPa, bar, MPa |
+| Volume          | m³, L, cm³        |
+| Length          | m, cm, mm         |
+| Mass            | kg, g             |
+| Energy / Work   | J, kJ             |
+| Specific Heat   | J/kg·K, kJ/kg·K   |
+| Specific Volume | m³/kg             |
+| Heating Value   | kJ/kg, MJ/kg      |
+| Force           | N, kN             |
+
+مثال:
+
+المستخدم يدخل:
+
+- Pressure = 2 bar
+- Temperature = 100 °C
+- Volume = 500 cm³
+
+الموقع يحولهم داخلياً إلى:
+
+- 200 kPa
+- 373.15 K
+- 0.0005 m³
+
+ثم يحسب ويرجع النتيجة بالوحدة اللي المستخدم اختارها للـ Output.
+
+قاعدة مهمة: درجة الحرارة المطلقة تتحول إلى Kelvin قبل معادلات الديناميكا الحرارية، مش مجرد تغيير Label.
+
+# 3. طريقة الحساب: وضعان منفصلان
+
+هنعمل Tab أو Switch بين الوضعين.
+
+## Calculation Mode
+
+Single Formula
+
+Calculate one equation independently.
+
+Cycle Solver
+
+Calculate related cycle properties together.
+
+### Mode A: Single Formula
+
+مثلاً المستخدم يختار:
+
+`Otto → Process 1-2 → Final Temperature T2`
+
+هيظهر:
+
+| Input | Value | Unit |
+| ----- | ----- | ---- |
+| T1    | 300   | K    |
+| rc    | 8     | —    |
+| γ     | 1.4   | —    |
+
+والنتيجة:
+
+\\[ T_2=T_1r_c^{\gamma-1} \\]
+
+\\[ T_2=300(8)^{0.4} \\]
+
+Result
+
+\\[ T_2\approx689.2 K \\]
+
+### Mode B: Cycle Solver
+
+هنا المستخدم يختار Otto أو Diesel، وبعدها يدخل الـ Initial Conditions والبيانات المتاحة.
+
+مثال Otto:
+
+Initial Conditions
+
+- P1
+- T1
+- rc
+- rp
+- γ
+
+Additional Inputs
+
+- m
+- cv
+- Vd أو بيانات الأسطوانة
+- Fuel data (اختياري حسب الحساب المطلوب)
+
+الموقع يقدر يستنتج:
+
+- T2, P2
+- T3, P3
+- T4, P4
+- Qadd, Qrej
+- Wcomp, Wexp, Wnet
+- Thermal Efficiency
+- Mean Effective Pressure
+
+لكن مش هنفترض إن كل القيم ممكن تتحسب من أي مجموعة Inputs؛ لازم يكون فيه بيانات كافية لكل معادلة.
+
+مثلاً لو المستخدم مش مدخل `m`، نقدر نحسب Specific Work، لكن مش Total Work.
+
+ولو مش مدخل `Vd` أو بيانات تسمح بحسابه، مش هنظهر Mean Effective Pressure كأنه محسوب.
+
+نفس الفكرة في Diesel، لكن هنستخدم `β` بدل `rp` في توصيف Heat Addition، ونستخدم `cp` في Heat Added.
+
+# 4. تصميم الـ Formula Engine
+
+هنفصل بين 3 حاجات:
+
+1. Formula Data: تعريف القانون ومدخلاته ومخرجاته.
+2. Calculation Engine: تنفيذ المعادلات.
+3. Unit Converter: تحويل الوحدات.
+
+الـ Formula Data هيبقى بالشكل التالي:
+
+```
+
+export const ottoFormulas = [
+  {
+    id: "otto-compression-temperature",
+
+    name: "Final Temperature (T2)",
+
+    category: "Process 1-2",
+
+    equation: "T_2 = T_1 r_c^{\\gamma - 1}",
+
+    inputs: [
+      {
+        key: "T1",
+        label: "Initial Temperature",
+        quantity: "temperature",
+        defaultUnit: "K",
+        required: true,
+      },
+      {
+        key: "rc",
+        label: "Compression Ratio",
+        quantity: "ratio",
+        defaultUnit: "-",
+        required: true,
+      },
+      {
+        key: "gamma",
+        label: "Specific Heat Ratio",
+        quantity: "ratio",
+        defaultUnit: "-",
+        defaultValue: 1.4,
+        required: true,
+      },
+    ],
+
+    outputs: [
+      {
+        key: "T2",
+        label: "Final Temperature",
+        quantity: "temperature",
+        defaultUnit: "K",
+      },
+    ],
+
+    calculate: ({ T1, rc, gamma }) => ({
+      T2: T1 * Math.pow(rc, gamma - 1),
+    }),
+  },
+];
+
+```
+
+ده مثال واحد، وباقي القوانين هتتسجل بنفس الـ Structure.
+
+## 5. Unit Conversion Architecture
+
+هنعمل ملف مستقل اسمه:
+
+`src/utils/unitConverter.js`
+
+مثال مبدئي:
+
+```
+
+const units = {
+  pressure: {
+    Pa: 1,
+    kPa: 1000,
+    bar: 100000,
+    MPa: 1000000,
+  },
+
+  volume: {
+    "m3": 1,
+    L: 0.001,
+    "cm3": 0.000001,
+  },
+
+  mass: {
+    kg: 1,
+    g: 0.001,
+  },
+
+  length: {
+    m: 1,
+    cm: 0.01,
+    mm: 0.001,
+  },
+
+  energy: {
+    J: 1,
+    kJ: 1000,
+  },
+};
+
+export function convertToSI(value, quantity, unit) {
+  if (quantity === "temperature") {
+    if (unit === "C") return value + 273.15;
+    if (unit === "K") return value;
+  }
+
+  return value * units[quantity][unit];
+}
+
+```
+
+ده أساس التحويل فقط؛ هنضيف تحويلات الحرارة النوعية والحجم النوعي والـ Heating Value، وكمان التحويل العكسي للنتائج.
+
+# 6. Validation & Error Handling
+
+لازم الحاسبة تتعامل مع أخطاء المستخدم بشكل هندسي، مش مجرد `try/catch`.
+
+| الحالة                | التصرف                      |
+| --------------------- | --------------------------- |
+| Input فاضي            | Required field              |
+| قيمة سالبة في Mass    | Reject                      |
+| `V2 = 0`              | Division by zero            |
+| `rc <= 1`             | Invalid compression ratio   |
+| `γ <= 1`              | Invalid specific heat ratio |
+| `β <= 1`              | Invalid cut-off ratio       |
+| درجة حرارة أقل من 0 K | Reject                      |
+| Unit غير متوافقة      | Reject                      |
+
+كمان هنستخدم Number Precision مناسب، ونعرض النتيجة مثلاً بـ 3 أو 4 decimal places مع إمكانية إظهار القيمة الكاملة.
+
+# 7. شكل الـ Final UI
+
+[sage-calculator - Design - 8080.ai](https://images.openai.com/static-rsc-4/5a3P_Oiq1MfnINuTSjdzF0obQ_FY_RjAKC8hyc9o7fDadfJ43-GL5t0sq6DPjz2cUI5PbowIdlBinIRqpyPtqaDEcffl_A8fxgFHUbVF-b__IHvstV_jJFDBzwFzfnu_QeXuVQO0Jco2ugf_GelGii7IBQBxky0X8fCMHhP6iyg?purpose=inline)
+
+[Free Energy Calculator | Easy Online Physics Tool | Free Calculators](https://images.openai.com/static-rsc-4/otCoQPwHmZbf1beOJiM8UGZGLbzBLWgx8OVwceCh0_SbP_6bOmCz4NeAM5Q4ecAYBmM9NQ3tTMvANW63qvj45_lXjJ0d8iXD1YlvYkOLhkl0Z45x1J3CEl1bfxyFhdNmKanzjWUSAUPrso1opgBwN8jtpxNdmP23qh8Dg6zyhkU?purpose=inline)
+
+[Thermodynamic Cycles — Carnot to Brayton Guide | MechSimulator](https://images.openai.com/static-rsc-4/YraxaxeSrUYnxY29G0kVjpZ3PZLls8H5nxax2zcF8AD-mSMSQGCbEJz_K6BxQLTRMIALnHjamnTkA-qRw1Z-TReCFKWGXrQ-uCUPQxz_D9B0CuxutjqzSj_6nNuG1X7GnV9ys6v73KUyuPcsTz6gicOiZVplf7T5sYtE3v5k-P4?purpose=inline)
+
+9
+
+التصميم هيكون فيه:
+
+- Sidebar فيها Otto وDiesel.
+- Formula Search.
+- Formula Categories.
+- Input Panel.
+- Unit Selectors.
+- Calculate Button.
+- Results Panel.
+- Mathematical Equation Display.
+- Calculation Steps لعرض طريقة الوصول للنتيجة.
+
+# 8. Final Project Structure
+
+بعد القرارات الجديدة، هنستخدم Structure يسمح بإضافة قوانين جديدة بسهولة:
+
+```
+engineering-calculator/
+│
+├── src/
+│   ├── components/
+│   │   ├── Navbar.jsx
+│   │   ├── Sidebar.jsx
+│   │   ├── FormulaCard.jsx
+│   │   ├── FormulaSelector.jsx
+│   │   ├── DynamicForm.jsx
+│   │   ├── UnitSelector.jsx
+│   │   ├── ResultCard.jsx
+│   │   └── CalculationSteps.jsx
+│   │
+│   ├── data/
+│   │   ├── otto/
+│   │   │   ├── basic.js
+│   │   │   ├── processes.js
+│   │   │   └── performance.js
+│   │   │
+│   │   └── diesel/
+│   │       ├── basic.js
+│   │       ├── processes.js
+│   │       └── performance.js
+│   │
+│   ├── engines/
+│   │   ├── formulaEngine.js
+│   │   └── cycleSolver.js
+│   │
+│   ├── utils/
+│   │   ├── unitConverter.js
+│   │   ├── validation.js
+│   │   └── formatResult.js
+│   │
+│   ├── pages/
+│   │   ├── Home.jsx
+│   │   ├── Calculator.jsx
+│   │   └── CycleSolver.jsx
+│   │
+│   ├── App.jsx
+│   └── main.jsx
+│
+└── package.json
+```
+
+## 9. التكنولوجيا النهائية
+
+| Technology   | Usage                  |
+| ------------ | ---------------------- |
+| React + Vite | Frontend               |
+| JavaScript   | Calculations           |
+| Tailwind CSS | Styling                |
+| KaTeX        | Mathematical equations |
+| Lucide React | Icons                  |
+| React Router | Navigation             |
+| Vercel       | Hosting                |
+
+لا Redux ولا Backend ولا Database. المشروع حجمه لا يحتاجهم.
+
+## 10. ترتيب التنفيذ
+
+هنمشي بالترتيب ده، وكل مرحلة نختبرها قبل اللي بعدها:
+
+1. Project Setup
+
+   إنشاء React + Vite وتثبيت المكتبات.
+2. Formula Data
+
+   تسجيل جميع قوانين Otto وDiesel في ملفات منفصلة.
+3. Single Formula Engine
+
+   بناء الحاسبة الديناميكية وتشغيل أول مجموعة قوانين.
+4. Unit Converter
+
+   إضافة التحويلات واختبارها.
+5. Cycle Solver
+
+   بناء محرك يستنتج المتغيرات الممكن حسابها من المدخلات.
+6. UI & Results
+
+   التصميم وعرض المعادلات وخطوات الحل.
+7. Testing & Deployment
+
+   مقارنة النتائج بمسائل المحاضرة ورفع الموقع.
+
+قرار رياضي أخير قبل التنفيذ: في حساب Net Work هنستخدم العلاقة المتسقة مع ميزان الطاقة:
+
+\\[ W\_{net}=Q\_{add}-Q\_{rej} \\]
+
+ونعتبر Compression Work وExpansion Work قيمتين موجبتين للمقدار، وبالتالي الشغل الصافي الخارج يساوي Expansion Work ناقص Compression Work. هنحتفظ بملاحظة التعارض الموجود في السلايدات بدل ما ننقل الخطأ للكود.
+
+الخطوة التالية: نبدأ Project Setup ثم نبني أول Calculator بإيدينا.
+
+مش هديك مشروع كامل جاهز ونقفل؛ هننفذه خطوة بخطوة، وكل Component هتفهم ليه بنعمله وإزاي باقي الـ Engine بيستخدمه.
